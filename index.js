@@ -7,6 +7,7 @@ import { hostname } from 'node:os';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy } from 'passport-github2';
 import { Resend } from 'resend';
 
 const server = http.createServer();
@@ -15,13 +16,12 @@ const __dirname = process.cwd();
 const bareServer = createBareServer('/b/');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-async function notifyLogin(profile, req) {
-  const name     = profile.displayName || 'Desconocido';
+// ── Notificación login ────────────────────────────────────
+async function notifyLogin(profile, req, provider) {
+  const name     = profile.displayName || profile.username || 'Desconocido';
   const email    = profile.emails?.[0]?.value || 'Sin correo';
   const photo    = profile.photos?.[0]?.value || '';
-  const googleId = profile.id || 'N/A';
-  const locale   = profile._json?.locale || 'N/A';
-  const verified = profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado';
+  const id       = profile.id || 'N/A';
   const time     = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
   const date     = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const ip       = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'Desconocida';
@@ -49,24 +49,57 @@ async function notifyLogin(profile, req) {
   else if (/mac os/i.test(ua))       os = 'macOS';
   else if (/linux/i.test(ua))        os = 'Linux';
 
+  // Datos extra de GitHub
+  const ghUsername = provider === 'github' ? (profile.username || 'N/A') : null;
+  const ghProfile  = provider === 'github' ? `https://github.com/${profile.username}` : null;
+  const ghBio      = provider === 'github' ? (profile._json?.bio || 'Sin bio') : null;
+  const ghLocation = provider === 'github' ? (profile._json?.location || 'Desconocida') : null;
+  const ghCompany  = provider === 'github' ? (profile._json?.company || 'N/A') : null;
+  const ghRepos    = provider === 'github' ? (profile._json?.public_repos ?? 'N/A') : null;
+  const ghFollowers= provider === 'github' ? (profile._json?.followers ?? 'N/A') : null;
+  const ghFollowing= provider === 'github' ? (profile._json?.following ?? 'N/A') : null;
+  const ghCreated  = provider === 'github' ? (profile._json?.created_at ? new Date(profile._json.created_at).toLocaleDateString('es-ES') : 'N/A') : null;
+
+  // Datos extra de Google
+  const googleVerified = provider === 'google' ? (profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado') : null;
+  const googleLocale   = provider === 'google' ? (profile._json?.locale || 'N/A') : null;
+
+  const providerIcon = provider === 'google' ? '🔵 Google' : '⚫ GitHub';
+
   try {
     await resend.emails.send({
       from: 'Waevo Proxy <onboarding@resend.dev>',
       to: 'alexsanchezfollia@gmail.com',
-      subject: `👤 Login — ${name} · ${email}`,
+      subject: `👤 Login ${providerIcon} — ${name}`,
       html: `
         <div style="background:#020810;color:#c0d8e8;font-family:monospace;padding:40px;border-radius:12px;max-width:560px;margin:0 auto;">
           <h1 style="font-size:2rem;letter-spacing:0.2em;margin:0 0 0.2rem 0;color:#00f5ff;">WAEVO</h1>
-          <p style="color:rgba(0,245,255,0.35);font-size:0.65rem;letter-spacing:0.4em;margin:0 0 2rem 0;">NUEVO USUARIO CONECTADO</p>
+          <p style="color:rgba(0,245,255,0.35);font-size:0.65rem;letter-spacing:0.4em;margin:0 0 0.5rem 0;">NUEVO USUARIO CONECTADO</p>
+          <p style="color:${provider === 'google' ? '#4285F4' : '#fff'};font-size:0.7rem;letter-spacing:0.3em;margin:0 0 2rem 0;">VÍA ${provider.toUpperCase()}</p>
+
           ${photo ? `<img src="${photo}" style="width:70px;height:70px;border-radius:50%;border:2px solid #00f5ff;display:block;margin-bottom:2rem;"/>` : ''}
-          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE GOOGLE</p>
+
+          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE ${provider.toUpperCase()}</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">NOMBRE</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${name}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">CORREO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#00f5ff;">${email}</td></tr>
-            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">VERIFICADO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${verified}</td></tr>
-            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">GOOGLE ID</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.5);">${googleId}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA</td><td style="padding:8px 0;color:#e0f7ff;">${locale}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">ID</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.5);">${id}</td></tr>
+            ${provider === 'google' ? `
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">VERIFICADO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${googleVerified}</td></tr>
+            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA</td><td style="padding:8px 0;color:#e0f7ff;">${googleLocale}</td></tr>
+            ` : `
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">USERNAME</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">@${ghUsername}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">PERFIL</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#00f5ff;"><a href="${ghProfile}" style="color:#00f5ff;">${ghProfile}</a></td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">BIO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghBio}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">UBICACIÓN</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghLocation}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">EMPRESA</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghCompany}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">REPOS PÚBLICOS</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghRepos}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">SEGUIDORES</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghFollowers}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">SIGUIENDO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ghFollowing}</td></tr>
+            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">CUENTA CREADA</td><td style="padding:8px 0;color:#e0f7ff;">${ghCreated}</td></tr>
+            `}
           </table>
+
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DISPOSITIVO Y NAVEGADOR</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">DISPOSITIVO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${device}</td></tr>
@@ -74,27 +107,31 @@ async function notifyLogin(profile, req) {
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">NAVEGADOR</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${browser}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">USER AGENT</td><td style="padding:8px 0;color:rgba(0,245,255,0.4);font-size:0.7rem;word-break:break-all;">${ua}</td></tr>
           </table>
+
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">RED Y CONEXIÓN</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">IP</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#ff2d6b;">${ip}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA NAVEGADOR</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${lang}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">REFERER</td><td style="padding:8px 0;color:#e0f7ff;">${referer}</td></tr>
           </table>
+
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">FECHA Y HORA</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">FECHA</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${date}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">HORA</td><td style="padding:8px 0;color:#e0f7ff;">${time}</td></tr>
           </table>
+
           <p style="color:rgba(0,245,255,0.15);font-size:0.55rem;letter-spacing:0.2em;margin:0;text-align:center;">WAEVO PROXY · SISTEMA DE MONITOREO</p>
         </div>
       `,
     });
-    console.log(`📧 Notificación enviada — ${name} (${email})`);
+    console.log(`📧 Notificación enviada — ${name} (${provider})`);
   } catch (err) {
     console.error('❌ Error notificación:', err);
   }
 }
 
+// ── Sesión ────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'waevo-secret',
   resave: false,
@@ -102,11 +139,26 @@ app.use(session({
   cookie: { secure: false, httpOnly: true, expires: false }
 }));
 
+// ── Passport Google ───────────────────────────────────────
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: 'https://waevo-proxy.vercel.app/auth/callback',
-}, (accessToken, refreshToken, profile, done) => done(null, profile)));
+}, (accessToken, refreshToken, profile, done) => {
+  profile.provider = 'google';
+  return done(null, profile);
+}));
+
+// ── Passport GitHub ───────────────────────────────────────
+passport.use(new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: 'https://waevo-proxy.vercel.app/auth/github/callback',
+  scope: ['user:email'],
+}, (accessToken, refreshToken, profile, done) => {
+  profile.provider = 'github';
+  return done(null, profile);
+}));
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
@@ -114,11 +166,12 @@ passport.deserializeUser((user, done) => done(null, user));
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ── Middlewares ───────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// Auth — solo protege rutas reales, nunca el proxy
+// ── Auth middleware ───────────────────────────────────────
 app.use((req, res, next) => {
   if (
     req.path.startsWith('/uv/') ||
@@ -131,9 +184,10 @@ app.use((req, res, next) => {
   res.redirect('/login');
 });
 
-// Estáticos exactamente igual que el original
+// ── Estáticos ─────────────────────────────────────────────
 app.use(express.static(__dirname + '/public'));
 
+// ── Rutas Google ──────────────────────────────────────────
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
@@ -141,11 +195,25 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
   async (req, res) => {
-    await notifyLogin(req.user, req);
+    await notifyLogin(req.user, req, 'google');
     res.redirect('/');
   }
 );
 
+// ── Rutas GitHub ──────────────────────────────────────────
+app.get('/auth/github', passport.authenticate('github', {
+  scope: ['user:email'],
+}));
+
+app.get('/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: '/login' }),
+  async (req, res) => {
+    await notifyLogin(req.user, req, 'github');
+    res.redirect('/');
+  }
+);
+
+// ── Logout ────────────────────────────────────────────────
 app.get('/auth/logout', (req, res) => {
   req.logout(() => {
     req.session.destroy(() => {
@@ -155,6 +223,7 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
+// ── Bypass ────────────────────────────────────────────────
 app.post('/auth/bypass', (req, res) => {
   const { password } = req.body;
   if (password === process.env.BYPASS_PASS) {
@@ -166,6 +235,7 @@ app.post('/auth/bypass', (req, res) => {
   }
 });
 
+// ── Rutas principales ─────────────────────────────────────
 app.get('/login', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
@@ -181,6 +251,7 @@ app.get('/index', (req, res) => {
   res.sendFile(path.join(process.cwd(), '/public/index.html'));
 });
 
+// ── Servidor ──────────────────────────────────────────────
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);

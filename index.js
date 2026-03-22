@@ -9,6 +9,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { Strategy as DiscordStrategy } from 'passport-discord';
+import { Strategy as PayPalStrategy } from 'passport-paypal-oauth2';
 import { Resend } from 'resend';
 
 const server = http.createServer();
@@ -50,27 +51,33 @@ async function notifyLogin(profile, req, provider) {
   else if (/mac os/i.test(ua))       os = 'macOS';
   else if (/linux/i.test(ua))        os = 'Linux';
 
-  // Datos específicos por proveedor
-  const ghUsername  = provider === 'github'  ? (profile.username || 'N/A') : null;
-  const ghProfile   = provider === 'github'  ? `https://github.com/${profile.username}` : null;
-  const ghBio       = provider === 'github'  ? (profile._json?.bio || 'Sin bio') : null;
-  const ghLocation  = provider === 'github'  ? (profile._json?.location || 'Desconocida') : null;
-  const ghRepos     = provider === 'github'  ? (profile._json?.public_repos ?? 'N/A') : null;
-  const ghFollowers = provider === 'github'  ? (profile._json?.followers ?? 'N/A') : null;
-  const ghCreated   = provider === 'github'  ? (profile._json?.created_at ? new Date(profile._json.created_at).toLocaleDateString('es-ES') : 'N/A') : null;
+  // Datos GitHub
+  const ghUsername  = provider === 'github' ? (profile.username || 'N/A') : null;
+  const ghProfile   = provider === 'github' ? `https://github.com/${profile.username}` : null;
+  const ghBio       = provider === 'github' ? (profile._json?.bio || 'Sin bio') : null;
+  const ghLocation  = provider === 'github' ? (profile._json?.location || 'Desconocida') : null;
+  const ghRepos     = provider === 'github' ? (profile._json?.public_repos ?? 'N/A') : null;
+  const ghFollowers = provider === 'github' ? (profile._json?.followers ?? 'N/A') : null;
+  const ghCreated   = provider === 'github' ? (profile._json?.created_at ? new Date(profile._json.created_at).toLocaleDateString('es-ES') : 'N/A') : null;
 
-  const dcUsername  = provider === 'discord' ? (profile.username || 'N/A') : null;
-  const dcDiscrim   = provider === 'discord' ? (profile.discriminator || '0') : null;
-  const dcLocale    = provider === 'discord' ? (profile.locale || 'N/A') : null;
-  const dcVerified  = provider === 'discord' ? (profile.verified ? '✅ Verificado' : '❌ No verificado') : null;
-  const dcNitro     = provider === 'discord' ? (profile.premium_type ? '✅ Tiene Nitro' : '❌ Sin Nitro') : null;
-  const dcMfa       = provider === 'discord' ? (profile.mfa_enabled ? '✅ Activado' : '❌ No activado') : null;
+  // Datos Discord
+  const dcUsername = provider === 'discord' ? (profile.username || 'N/A') : null;
+  const dcDiscrim  = provider === 'discord' ? (profile.discriminator || '0') : null;
+  const dcLocale   = provider === 'discord' ? (profile.locale || 'N/A') : null;
+  const dcVerified = provider === 'discord' ? (profile.verified ? '✅ Verificado' : '❌ No verificado') : null;
+  const dcNitro    = provider === 'discord' ? (profile.premium_type ? '✅ Tiene Nitro' : '❌ Sin Nitro') : null;
+  const dcMfa      = provider === 'discord' ? (profile.mfa_enabled ? '✅ Activado' : '❌ No activado') : null;
 
+  // Datos Google
   const googleVerified = provider === 'google' ? (profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado') : null;
   const googleLocale   = provider === 'google' ? (profile._json?.locale || 'N/A') : null;
 
-  const providerColor = provider === 'google' ? '#4285F4' : provider === 'github' ? '#fff' : '#5865F2';
-  const providerName  = provider === 'google' ? '🔵 Google' : provider === 'github' ? '⚫ GitHub' : '🟣 Discord';
+  // Datos PayPal
+  const ppVerified = provider === 'paypal' ? (profile._json?.verified_account ? '✅ Verificado' : '❌ No verificado') : null;
+  const ppCountry  = provider === 'paypal' ? (profile._json?.address?.country || 'N/A') : null;
+
+  const providerColor = provider === 'google' ? '#4285F4' : provider === 'github' ? '#fff' : provider === 'discord' ? '#5865F2' : '#003087';
+  const providerName  = provider === 'google' ? '🔵 Google' : provider === 'github' ? '⚫ GitHub' : provider === 'discord' ? '🟣 Discord' : '🔵 PayPal';
 
   try {
     await resend.emails.send({
@@ -82,7 +89,6 @@ async function notifyLogin(profile, req, provider) {
           <h1 style="font-size:2rem;letter-spacing:0.2em;margin:0 0 0.2rem 0;color:#00f5ff;">WAEVO</h1>
           <p style="color:rgba(0,245,255,0.35);font-size:0.65rem;letter-spacing:0.4em;margin:0 0 0.5rem 0;">NUEVO USUARIO CONECTADO</p>
           <p style="color:${providerColor};font-size:0.7rem;letter-spacing:0.3em;margin:0 0 2rem 0;">VÍA ${provider.toUpperCase()}</p>
-
           ${photo ? `<img src="${photo}" style="width:70px;height:70px;border-radius:50%;border:2px solid #00f5ff;display:block;margin-bottom:2rem;"/>` : ''}
 
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE ${provider.toUpperCase()}</p>
@@ -112,6 +118,11 @@ async function notifyLogin(profile, req, provider) {
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">NITRO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${dcNitro}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">2FA</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${dcMfa}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA</td><td style="padding:8px 0;color:#e0f7ff;">${dcLocale}</td></tr>
+            ` : ''}
+
+            ${provider === 'paypal' ? `
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">VERIFICADO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ppVerified}</td></tr>
+            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">PAÍS</td><td style="padding:8px 0;color:#e0f7ff;">${ppCountry}</td></tr>
             ` : ''}
           </table>
 
@@ -186,6 +197,17 @@ passport.use(new DiscordStrategy({
   return done(null, profile);
 }));
 
+// ── Passport PayPal ───────────────────────────────────────
+passport.use(new PayPalStrategy({
+  clientID: process.env.PAYPAL_CLIENT_ID,
+  clientSecret: process.env.PAYPAL_CLIENT_SECRET,
+  callbackURL: 'https://waevo-proxy.vercel.app/auth/paypal/callback',
+  sandbox: false,
+}, (accessToken, refreshToken, profile, done) => {
+  profile.provider = 'paypal';
+  return done(null, profile);
+}));
+
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
@@ -246,6 +268,19 @@ app.get('/auth/discord/callback',
   passport.authenticate('discord', { failureRedirect: '/login' }),
   async (req, res) => {
     await notifyLogin(req.user, req, 'discord');
+    res.redirect('/');
+  }
+);
+
+// ── Rutas PayPal ──────────────────────────────────────────
+app.get('/auth/paypal', passport.authenticate('paypal', {
+  scope: ['openid', 'email', 'profile'],
+}));
+
+app.get('/auth/paypal/callback',
+  passport.authenticate('paypal', { failureRedirect: '/login' }),
+  async (req, res) => {
+    await notifyLogin(req.user, req, 'paypal');
     res.redirect('/');
   }
 );

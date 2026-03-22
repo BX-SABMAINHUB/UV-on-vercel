@@ -16,16 +16,15 @@ const app = express();
 const server = http.createServer();
 const bareServer = createBareServer('/b/');
 
-// ── Sesión SIN persistencia ───────────────────────────────
+// ── Sesión ────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'waevo-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: false,
-    maxAge: null,      // Sin expiración fija
-    expires: false,    // Solo dura mientras el navegador está abierto
     httpOnly: true,
+    expires: false,
   }
 }));
 
@@ -33,7 +32,7 @@ app.use(session({
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/auth/callback',
+  callbackURL: 'https://waevo-proxy.vercel.app/auth/callback',
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));
@@ -60,13 +59,12 @@ app.use((req, res, next) => {
     'camera=(), microphone=(), geolocation=(), payment=(), ' +
     'interest-cohort=(), browsing-topics=()'
   );
-  // MUY IMPORTANTE — evita que el navegador cachee páginas protegidas
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   next();
 });
 
-// Cache UV (esto sí puede cachearse)
+// Cache UV
 app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
   maxAge: '7d', immutable: true,
 }));
@@ -77,7 +75,6 @@ function requireAuth(req, res, next) {
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
   if (isPublic) return next();
 
-  // Solo deja pasar si está autenticado en ESTA sesión
   const authed = req.isAuthenticated() || req.session?.bypass === true;
   if (authed) return next();
 
@@ -104,7 +101,6 @@ app.get('/auth/callback',
   }
 );
 
-// Logout — destruye sesión completamente
 app.get('/auth/logout', (req, res) => {
   req.logout(() => {
     req.session.destroy(() => {
@@ -118,9 +114,8 @@ app.get('/auth/logout', (req, res) => {
 app.post('/auth/bypass', (req, res) => {
   const { password } = req.body;
   if (password === process.env.BYPASS_PASS) {
-    // Bypass solo para esta sesión de navegador
     req.session.bypass = true;
-    req.session.cookie.expires = false; // muere al cerrar el navegador
+    req.session.cookie.expires = false;
     res.json({ ok: true });
   } else {
     res.status(401).json({ ok: false, msg: 'Contraseña incorrecta' });
@@ -129,7 +124,6 @@ app.post('/auth/bypass', (req, res) => {
 
 // ── Rutas principales ─────────────────────────────────────
 app.get('/login', (req, res) => {
-  // Destruye cualquier sesión previa al entrar al login
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
     res.sendFile(path.join(__dirname, 'public/login.html'));

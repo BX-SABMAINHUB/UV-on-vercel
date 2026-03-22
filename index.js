@@ -16,12 +16,17 @@ const app = express();
 const server = http.createServer();
 const bareServer = createBareServer('/b/');
 
-// ── Sesión ────────────────────────────────────────────────
+// ── Sesión SIN persistencia ───────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'waevo-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+  cookie: {
+    secure: false,
+    maxAge: null,      // Sin expiración fija
+    expires: false,    // Solo dura mientras el navegador está abierto
+    httpOnly: true,
+  }
 }));
 
 // ── Passport Google OAuth ─────────────────────────────────
@@ -55,30 +60,36 @@ app.use((req, res, next) => {
     'camera=(), microphone=(), geolocation=(), payment=(), ' +
     'interest-cohort=(), browsing-topics=()'
   );
+  // MUY IMPORTANTE — evita que el navegador cachee páginas protegidas
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
   next();
 });
 
-// Cache UV
+// Cache UV (esto sí puede cachearse)
 app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
   maxAge: '7d', immutable: true,
 }));
 
-// Middleware auth — protege todo excepto login y auth
+// ── Middleware auth ───────────────────────────────────────
 function requireAuth(req, res, next) {
-  const publicPaths = ['/login', '/auth', '/auth/callback', '/auth/google'];
-  const isBypass = req.session?.bypass === true;
-  const isAuth = req.isAuthenticated();
+  const publicPaths = ['/login', '/auth'];
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
+  if (isPublic) return next();
 
-  if (isAuth || isBypass || isPublic) return next();
+  // Solo deja pasar si está autenticado en ESTA sesión
+  const authed = req.isAuthenticated() || req.session?.bypass === true;
+  if (authed) return next();
+
   res.redirect('/login');
 }
 
 app.use(requireAuth);
 
-// Estáticos (después del auth)
+// Estáticos protegidos
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1h', etag: true,
+  etag: false,
+  lastModified: false,
 }));
 
 // ── Rutas Auth Google ─────────────────────────────────────
@@ -89,23 +100,27 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
   (req, res) => {
-    // Login correcto — redirige al proxy
     res.redirect('/');
   }
 );
 
+// Logout — destruye sesión completamente
 app.get('/auth/logout', (req, res) => {
   req.logout(() => {
-    req.session.destroy();
-    res.redirect('/login');
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.redirect('/login');
+    });
   });
 });
 
-// ── Bypass con contraseña ─────────────────────────────────
+// ── Bypass ────────────────────────────────────────────────
 app.post('/auth/bypass', (req, res) => {
   const { password } = req.body;
   if (password === process.env.BYPASS_PASS) {
+    // Bypass solo para esta sesión de navegador
     req.session.bypass = true;
+    req.session.cookie.expires = false; // muere al cerrar el navegador
     res.json({ ok: true });
   } else {
     res.status(401).json({ ok: false, msg: 'Contraseña incorrecta' });
@@ -114,10 +129,11 @@ app.post('/auth/bypass', (req, res) => {
 
 // ── Rutas principales ─────────────────────────────────────
 app.get('/login', (req, res) => {
-  if (req.isAuthenticated() || req.session?.bypass) {
-    return res.redirect('/');
-  }
-  res.sendFile(path.join(__dirname, 'public/login.html'));
+  // Destruye cualquier sesión previa al entrar al login
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid');
+    res.sendFile(path.join(__dirname, 'public/login.html'));
+  });
 });
 
 app.get('/', (req, res) => {

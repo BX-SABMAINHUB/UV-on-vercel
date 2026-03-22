@@ -99,8 +99,8 @@
     }
     .logo::before{animation:glitch1 6s infinite;clip-path:polygon(0 0,100% 0,100% 35%,0 35%);}
     .logo::after{animation:glitch2 6s infinite;clip-path:polygon(0 65%,100% 65%,100% 100%,0 100%);}
-    @keyframes glitch1{0%,88%,100%{transform:none;opacity:0;}90%{transform:translateX(-3px);opacity:0.8;filter:hue-rotate(90deg);}92%{transform:translateX(3px);opacity:0.6;}94%{opacity:0;}}
-    @keyframes glitch2{0%,88%,100%{transform:none;opacity:0;}91%{transform:translateX(3px);opacity:0.8;filter:hue-rotate(-90deg);}93%{transform:translateX(-3px);opacity:0.6;}95%{opacity:0;}}
+    @keyframes glitch1{0%,88%,100%{transform:none;opacity:0;}90%{transform:translateX(-3px);opacity:0.8;}92%{transform:translateX(3px);opacity:0.6;}94%{opacity:0;}}
+    @keyframes glitch2{0%,88%,100%{transform:none;opacity:0;}91%{transform:translateX(3px);opacity:0.8;}93%{transform:translateX(-3px);opacity:0.6;}95%{opacity:0;}}
 
     .subtitle{font-size:0.58rem;letter-spacing:0.45em;color:rgba(0,245,255,0.28);text-transform:uppercase;margin-bottom:2rem;}
 
@@ -108,10 +108,9 @@
     .dot{width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;animation:blink 2s infinite;flex-shrink:0;}
     @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
 
-    /* Botones de login */
     .login-btns{display:flex;flex-direction:column;gap:0.75rem;}
 
-    .google-btn,.github-btn {
+    .login-btn {
       display:flex;align-items:center;justify-content:center;gap:0.8rem;
       width:100%;padding:0.95rem 1.5rem;
       border-radius:3px;
@@ -119,29 +118,19 @@
       font-size:0.85rem;letter-spacing:0.07em;
       cursor:pointer;text-decoration:none;
       transition:all 0.25s;position:relative;overflow:hidden;
-    }
-    .google-btn{
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.1);
       color:#e8eaed;
     }
-    .google-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);transform:translateY(-1px);}
-
-    .github-btn{
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.1);
-      color:#e8eaed;
-    }
-    .github-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);transform:translateY(-1px);}
-
-    .google-btn::before,.github-btn::before{
+    .login-btn::before{
       content:'';position:absolute;inset:0;
       background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent);
       transform:translateX(-100%);transition:transform 0.5s;
     }
-    .google-btn:hover::before,.github-btn:hover::before{transform:translateX(100%);}
-    .google-btn:active,.github-btn:active{transform:scale(0.98);}
-    .google-btn svg,.github-btn svg{width:20px;height:20px;flex-shrink:0;}
+    .login-btn:hover::before{transform:translateX(100%);}
+    .login-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);transform:translateY(-1px);}
+    .login-btn:active{transform:scale(0.98);}
+    .login-btn svg{width:20px;height:20px;flex-shrink:0;}
 
     .divider{display:flex;align-items:center;gap:1rem;margin:1.2rem 0;color:rgba(0,245,255,0.18);font-size:0.6rem;letter-spacing:0.25em;}
     .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(0,245,255,0.07);}
@@ -152,17 +141,16 @@
     .footer-text{margin-top:2rem;font-size:0.52rem;letter-spacing:0.25em;color:rgba(0,245,255,0.1);}
     .footer-text b{color:var(--pink);}
 
-    /* Modal */
     .modal-bg{display:none;position:fixed;inset:0;background:rgba(2,8,16,0.88);backdrop-filter:blur(12px);z-index:10;align-items:center;justify-content:center;}
     .modal-bg.active{display:flex;}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2.2rem;width:100%;max-width:300px;position:relative;animation:fadeUp 0.3s ease both;box-shadow:0 0 60px rgba(0,245,255,0.08);}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2.2rem;width:100%;max-width:300px;position:relative;animation:fadeUp 0.3s ease both;}
     .modal::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
     .mc{position:absolute;width:10px;height:10px;border-color:var(--cyan);border-style:solid;opacity:0.35;}
     .mc.tl{top:-1px;left:-1px;border-width:1px 0 0 1px;}
     .mc.tr{top:-1px;right:-1px;border-width:1px 1px 0 0;}
     .mc.bl{bottom:-1px;left:-1px;border-width:0 0 1px 1px;}
     .mc.br{bottom:-1px;right:-1px;border-width:0 1px 1px 0;}
-    .modal-close{position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;color:rgba(0,245,255,0.3);font-size:1rem;cursor:pointer;transition:color 0.2s;line-height:1;}
+    .modal-close{position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;color:rgba(0,245,255,0.3);font-size:1rem;cursor:pointer;}
     .modal-close:hover{color:var(--pink);}
     .modal-title{font-family:'Orbitron',sans-serif;font-size:0.78rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:1.5rem;text-align:center;}
     .field{margin-bottom:0.8rem;}
@@ -173,7 +161,7 @@
     .btn{width:100%;margin-top:0.5rem;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;border-radius:3px;color:#000;font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;padding:0.85rem;cursor:pointer;text-transform:uppercase;transition:all 0.2s;}
     .btn:hover{filter:brightness(1.15);box-shadow:0 0 20px rgba(0,245,255,0.3);}
     .btn:active{transform:scale(0.98);}
-    .msg{margin-top:0.7rem;font-size:0.67rem;text-align:center;min-height:1rem;letter-spacing:0.05em;}
+    .msg{margin-top:0.7rem;font-size:0.67rem;text-align:center;min-height:1rem;}
     .msg.error{color:var(--pink);}
     .msg.ok{color:#00ff88;}
 
@@ -186,7 +174,6 @@
 <div class="orb orb2"></div>
 <div class="orb orb3"></div>
 
-<!-- Modal bypass -->
 <div class="modal-bg" id="bypassModal">
   <div class="modal">
     <div class="mc tl"></div><div class="mc tr"></div>
@@ -202,7 +189,6 @@
   </div>
 </div>
 
-<!-- Card -->
 <div class="card">
   <div class="corner tl"></div><div class="corner tr"></div>
   <div class="corner bl"></div><div class="corner br"></div>
@@ -218,8 +204,9 @@
   </div>
 
   <div class="login-btns">
+
     <!-- Google -->
-    <a class="google-btn" href="/auth/google">
+    <a class="login-btn" href="/auth/google">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -230,12 +217,21 @@
     </a>
 
     <!-- GitHub -->
-    <a class="github-btn" href="/auth/github">
+    <a class="login-btn" href="/auth/github">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white">
         <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
       </svg>
       Continuar con GitHub
     </a>
+
+    <!-- Discord -->
+    <a class="login-btn" href="/auth/discord">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#5865F2">
+        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.032.053a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+      </svg>
+      Continuar con Discord
+    </a>
+
   </div>
 
   <div class="divider">o</div>
@@ -268,7 +264,6 @@
     const pass = document.getElementById('bypassInput').value.trim();
     const msg  = document.getElementById('bypassMsg');
     if (!pass) return;
-
     try {
       const res  = await fetch('/auth/bypass', {
         method: 'POST',

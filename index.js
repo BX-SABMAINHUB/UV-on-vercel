@@ -19,47 +19,136 @@ const bareServer = createBareServer('/b/');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Notificación de login ─────────────────────────────────
-async function notifyLogin(profile, ip) {
-  const name     = profile.displayName || 'Desconocido';
-  const email    = profile.emails?.[0]?.value || 'Sin correo';
-  const photo    = profile.photos?.[0]?.value || '';
-  const googleId = profile.id || 'N/A';
-  const time     = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+async function notifyLogin(profile, req) {
+  const name      = profile.displayName || 'Desconocido';
+  const email     = profile.emails?.[0]?.value || 'Sin correo';
+  const photo     = profile.photos?.[0]?.value || '';
+  const googleId  = profile.id || 'N/A';
+  const locale    = profile._json?.locale || 'N/A';
+  const verified  = profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado';
+  const time      = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+  const date      = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.socket.remoteAddress
+    || 'Desconocida';
+
+  const ua = req.headers['user-agent'] || 'Desconocido';
+
+  const isMobile = /mobile|android|iphone|ipad/i.test(ua);
+  const isTablet = /ipad|tablet/i.test(ua);
+  const device   = isTablet ? '📱 Tablet' : isMobile ? '📱 Móvil' : '🖥️ Ordenador';
+
+  let browser = 'Desconocido';
+  if (/edg/i.test(ua))          browser = 'Microsoft Edge';
+  else if (/chrome/i.test(ua))  browser = 'Google Chrome';
+  else if (/safari/i.test(ua))  browser = 'Safari';
+  else if (/firefox/i.test(ua)) browser = 'Firefox';
+  else if (/opera/i.test(ua))   browser = 'Opera';
+
+  let os = 'Desconocido';
+  if (/windows nt 10/i.test(ua))     os = 'Windows 10/11';
+  else if (/windows/i.test(ua))      os = 'Windows';
+  else if (/iphone os 17/i.test(ua)) os = 'iOS 17';
+  else if (/iphone/i.test(ua))       os = 'iOS';
+  else if (/ipad/i.test(ua))         os = 'iPadOS';
+  else if (/android/i.test(ua))      os = 'Android';
+  else if (/mac os/i.test(ua))       os = 'macOS';
+  else if (/linux/i.test(ua))        os = 'Linux';
+
+  const lang    = req.headers['accept-language']?.split(',')[0] || 'Desconocido';
+  const referer = req.headers['referer'] || 'Acceso directo';
 
   try {
     await resend.emails.send({
       from: 'Waevo Proxy <onboarding@resend.dev>',
       to: 'alexsanchezfollia@gmail.com',
-      subject: `👤 Nuevo login — ${name}`,
+      subject: `👤 Login — ${name} · ${email}`,
       html: `
-        <div style="background:#020810;color:#c0d8e8;font-family:monospace;padding:40px;border-radius:8px;max-width:500px;">
-          <h1 style="font-size:1.8rem;letter-spacing:0.2em;background:linear-gradient(135deg,#00f5ff,#7b2dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.2rem;">WAEVO</h1>
-          <p style="color:rgba(0,245,255,0.4);font-size:0.7rem;letter-spacing:0.3em;margin-bottom:2rem;">NUEVO USUARIO CONECTADO</p>
+        <div style="background:#020810;color:#c0d8e8;font-family:monospace;padding:40px;border-radius:12px;max-width:560px;margin:0 auto;">
 
-          ${photo ? `<img src="${photo}" style="width:60px;height:60px;border-radius:50%;border:2px solid #00f5ff;margin-bottom:1.5rem;display:block;"/>` : ''}
+          <h1 style="font-size:2rem;letter-spacing:0.2em;margin:0 0 0.2rem 0;color:#00f5ff;">WAEVO</h1>
+          <p style="color:rgba(0,245,255,0.35);font-size:0.65rem;letter-spacing:0.4em;margin:0 0 2rem 0;">NUEVO USUARIO CONECTADO</p>
 
-          <table style="width:100%;border-collapse:collapse;">
+          ${photo ? `<img src="${photo}" style="width:70px;height:70px;border-radius:50%;border:2px solid #00f5ff;display:block;margin-bottom:2rem;"/>` : ''}
+
+          <!-- Sección: Datos de Google -->
+          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE GOOGLE</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;width:40%;">NOMBRE</td>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${name}</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;width:45%;">NOMBRE COMPLETO</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${name}</td>
             </tr>
             <tr>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">CORREO</td>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${email}</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">CORREO</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#00f5ff;">${email}</td>
             </tr>
             <tr>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">IP</td>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${ip}</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">VERIFICADO</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${verified}</td>
             </tr>
             <tr>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">HORA</td>
-              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${time}</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">GOOGLE ID</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.5);font-size:0.8rem;">${googleId}</td>
             </tr>
             <tr>
-              <td style="padding:10px 0;color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">GOOGLE ID</td>
-              <td style="padding:10px 0;color:rgba(0,245,255,0.5);font-size:0.8rem;">${googleId}</td>
+              <td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">IDIOMA CUENTA</td>
+              <td style="padding:8px 0;color:#e0f7ff;">${locale}</td>
             </tr>
           </table>
+
+          <!-- Sección: Dispositivo -->
+          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DISPOSITIVO Y NAVEGADOR</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;width:45%;">DISPOSITIVO</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${device}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">SISTEMA OPERATIVO</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${os}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">NAVEGADOR</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${browser}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">USER AGENT</td>
+              <td style="padding:8px 0;color:rgba(0,245,255,0.4);font-size:0.7rem;word-break:break-all;">${ua}</td>
+            </tr>
+          </table>
+
+          <!-- Sección: Red -->
+          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">RED Y CONEXIÓN</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;width:45%;">DIRECCIÓN IP</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#ff2d6b;">${ip}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">IDIOMA NAVEGADOR</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${lang}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">REFERER</td>
+              <td style="padding:8px 0;color:#e0f7ff;">${referer}</td>
+            </tr>
+          </table>
+
+          <!-- Sección: Tiempo -->
+          <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">FECHA Y HORA</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;width:45%;">FECHA</td>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${date}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;letter-spacing:0.15em;">HORA (ESP)</td>
+              <td style="padding:8px 0;color:#e0f7ff;">${time}</td>
+            </tr>
+          </table>
+
+          <p style="color:rgba(0,245,255,0.15);font-size:0.55rem;letter-spacing:0.2em;margin:0;text-align:center;">WAEVO PROXY · SISTEMA DE MONITOREO</p>
         </div>
       `,
     });
@@ -147,8 +236,7 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
   async (req, res) => {
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Desconocida';
-    await notifyLogin(req.user, ip);
+    await notifyLogin(req.user, req);
     res.redirect('/');
   }
 );

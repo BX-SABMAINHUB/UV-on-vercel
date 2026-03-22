@@ -1,12 +1,19 @@
 {
-    "version": 2,
-    "devCommand": "node index.js",
-    "builds": [{
-        "src": "index.js",
-        "use": "@vercel/node"
-    }],
-    "routes": [{
-        "src": "/(.*)",
-        "dest": "index.js"
-    }]
+  "name": "waevo-proxy",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "@tomphttp/bare-server-node": "^2.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-github2": "^0.1.12",
+    "resend": "^3.2.0"
   }
+}

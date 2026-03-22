@@ -72,7 +72,6 @@ async function notifyLogin(profile, req) {
 
           ${photo ? `<img src="${photo}" style="width:70px;height:70px;border-radius:50%;border:2px solid #00f5ff;display:block;margin-bottom:2rem;"/>` : ''}
 
-          <!-- Sección: Datos de Google -->
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE GOOGLE</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr>
@@ -97,7 +96,6 @@ async function notifyLogin(profile, req) {
             </tr>
           </table>
 
-          <!-- Sección: Dispositivo -->
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DISPOSITIVO Y NAVEGADOR</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr>
@@ -118,7 +116,6 @@ async function notifyLogin(profile, req) {
             </tr>
           </table>
 
-          <!-- Sección: Red -->
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">RED Y CONEXIÓN</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr>
@@ -135,7 +132,6 @@ async function notifyLogin(profile, req) {
             </tr>
           </table>
 
-          <!-- Sección: Tiempo -->
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">FECHA Y HORA</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr>
@@ -211,7 +207,12 @@ app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
 
 // ── Middleware auth ───────────────────────────────────────
 function requireAuth(req, res, next) {
-  const publicPaths = ['/login', '/auth'];
+  const publicPaths = [
+    '/login',
+    '/auth',
+    '/uv/',
+    '/b/',
+  ];
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
   if (isPublic) return next();
 

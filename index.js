@@ -5,6 +5,9 @@ import cors from 'cors';
 import path from 'path';
 import { hostname } from 'node:os';
 import { existsSync } from 'node:fs';
+import session from 'express-session';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const __dirname = process.cwd();
 const PORT = process.env.PORT || 3000;
@@ -13,85 +16,121 @@ const app = express();
 const server = http.createServer();
 const bareServer = createBareServer('/b/');
 
-// ── Anti-tracking & Seguridad ─────────────────────────────
-app.use((req, res, next) => {
-  // Quita info del servidor
-  res.removeHeader('X-Powered-By');
-  res.removeHeader('Server');
+// ── Sesión ────────────────────────────────────────────────
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'waevo-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+}));
 
-  // Bloquea iframes externos
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+// ── Passport Google OAuth ─────────────────────────────────
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: '/auth/callback',
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
 
-  // Desactiva cámara, mic, GPS, sensores, tracking
-  res.setHeader('Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), ' +
-    'magnetometer=(), gyroscope=(), accelerometer=(), ' +
-    'interest-cohort=(), browsing-topics=()'
-  );
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 
-  // No enviar referrer a sitios externos
-  res.setHeader('Referrer-Policy', 'no-referrer');
-
-  // Bloquea detección de tipo de contenido
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-
-  // Política de seguridad de contenido
-  res.setHeader('Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' wss: ws:; " +
-    "img-src 'self' data: blob:; " +
-    "frame-ancestors 'none';"
-  );
-
-  // Anti fingerprinting
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-
-  // Service Worker scope completo
-  res.setHeader('Service-Worker-Allowed', '/');
-
-  next();
-});
+app.use(passport.initialize());
+app.use(passport.session());
 
 // ── Middlewares ───────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Cache agresivo para archivos UV
-app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
-  maxAge: '7d',
-  immutable: true,
-}));
-
-// Cache moderado para estáticos
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1h',
-  etag: true,
-  lastModified: true,
-}));
-
-// ── Rutas ─────────────────────────────────────────────────
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+// Headers seguridad
+app.use((req, res, next) => {
+  res.removeHeader('X-Powered-By');
+  res.removeHeader('Server');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), ' +
+    'interest-cohort=(), browsing-topics=()'
+  );
+  next();
 });
 
-app.get('/index', (req, res) => {
+// Cache UV
+app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
+  maxAge: '7d', immutable: true,
+}));
+
+// Middleware auth — protege todo excepto login y auth
+function requireAuth(req, res, next) {
+  const publicPaths = ['/login', '/auth', '/auth/callback', '/auth/google'];
+  const isBypass = req.session?.bypass === true;
+  const isAuth = req.isAuthenticated();
+  const isPublic = publicPaths.some(p => req.path.startsWith(p));
+
+  if (isAuth || isBypass || isPublic) return next();
+  res.redirect('/login');
+}
+
+app.use(requireAuth);
+
+// Estáticos (después del auth)
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h', etag: true,
+}));
+
+// ── Rutas Auth Google ─────────────────────────────────────
+app.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+}));
+
+app.get('/auth/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    // Login correcto — redirige al proxy
+    res.redirect('/');
+  }
+);
+
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => {
+    req.session.destroy();
+    res.redirect('/login');
+  });
+});
+
+// ── Bypass con contraseña ─────────────────────────────────
+app.post('/auth/bypass', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.BYPASS_PASS) {
+    req.session.bypass = true;
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, msg: 'Contraseña incorrecta' });
+  }
+});
+
+// ── Rutas principales ─────────────────────────────────────
+app.get('/login', (req, res) => {
+  if (req.isAuthenticated() || req.session?.bypass) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public/login.html'));
+});
+
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 // 404
 app.use((req, res) => {
-  const notFound = path.join(__dirname, 'public/404.html');
-  if (existsSync(notFound)) {
-    res.status(404).sendFile(notFound);
-  } else {
-    res.status(404).send('404 Not Found');
-  }
+  res.status(404).sendFile(
+    existsSync(path.join(__dirname, 'public/404.html'))
+      ? path.join(__dirname, 'public/404.html')
+      : path.join(__dirname, 'public/index.html')
+  );
 });
 
 // ── Servidor HTTP ─────────────────────────────────────────
@@ -111,41 +150,21 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-server.on('error', (err) => {
-  console.error('❌ Server error:', err);
-});
+server.on('error', (err) => console.error('❌ Server error:', err));
 
 // ── Inicio ────────────────────────────────────────────────
 server.listen(PORT, () => {
   const address = server.address();
   console.log('\n🌐 Waevo Proxy corriendo en:');
   console.log(`   http://localhost:${address.port}`);
-  console.log(`   http://${hostname()}:${address.port}`);
-  console.log(`   http://${
-    address.family === 'IPv6'
-      ? `[${address.address}]`
-      : address.address
-  }:${address.port}\n`);
+  console.log(`   http://${hostname()}:${address.port}\n`);
 });
 
-// ── Shutdown limpio ───────────────────────────────────────
 function shutdown(signal) {
-  console.log(`\n${signal} recibido — cerrando servidor...`);
-  server.close(() => {
-    bareServer.close();
-    console.log('✅ Servidor cerrado.');
-    process.exit(0);
-  });
+  console.log(`\n${signal} — cerrando...`);
+  server.close(() => { bareServer.close(); process.exit(0); });
 }
-
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
-
-// Anti-crash
-process.on('uncaughtException', (err) => {
-  console.error('❌ Error no capturado:', err);
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error('❌ Promesa rechazada:', reason);
-});
+process.on('uncaughtException', (err) => console.error('❌', err));
+process.on('unhandledRejection', (r) => console.error('❌', r));

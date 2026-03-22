@@ -4,7 +4,6 @@ import { createBareServer } from '@tomphttp/bare-server-node';
 import cors from 'cors';
 import path from 'path';
 import { hostname } from 'node:os';
-import { existsSync } from 'node:fs';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
@@ -28,16 +27,11 @@ async function notifyLogin(profile, req) {
   const verified  = profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado';
   const time      = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
   const date      = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.socket.remoteAddress
-    || 'Desconocida';
-
-  const ua = req.headers['user-agent'] || 'Desconocido';
-
-  const isMobile = /mobile|android|iphone|ipad/i.test(ua);
-  const isTablet = /ipad|tablet/i.test(ua);
-  const device   = isTablet ? '📱 Tablet' : isMobile ? '📱 Móvil' : '🖥️ Ordenador';
+  const ip        = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'Desconocida';
+  const ua        = req.headers['user-agent'] || 'Desconocido';
+  const isMobile  = /mobile|android|iphone|ipad/i.test(ua);
+  const isTablet  = /ipad|tablet/i.test(ua);
+  const device    = isTablet ? '📱 Tablet' : isMobile ? '📱 Móvil' : '🖥️ Ordenador';
 
   let browser = 'Desconocido';
   if (/edg/i.test(ua))          browser = 'Microsoft Edge';
@@ -69,16 +63,14 @@ async function notifyLogin(profile, req) {
           <h1 style="font-size:2rem;letter-spacing:0.2em;margin:0 0 0.2rem 0;color:#00f5ff;">WAEVO</h1>
           <p style="color:rgba(0,245,255,0.35);font-size:0.65rem;letter-spacing:0.4em;margin:0 0 2rem 0;">NUEVO USUARIO CONECTADO</p>
           ${photo ? `<img src="${photo}" style="width:70px;height:70px;border-radius:50%;border:2px solid #00f5ff;display:block;margin-bottom:2rem;"/>` : ''}
-
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DATOS DE GOOGLE</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">NOMBRE</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${name}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">CORREO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#00f5ff;">${email}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">VERIFICADO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${verified}</td></tr>
-            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">GOOGLE ID</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.5);font-size:0.8rem;">${googleId}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA CUENTA</td><td style="padding:8px 0;color:#e0f7ff;">${locale}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">GOOGLE ID</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.5);">${googleId}</td></tr>
+            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA</td><td style="padding:8px 0;color:#e0f7ff;">${locale}</td></tr>
           </table>
-
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">DISPOSITIVO Y NAVEGADOR</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">DISPOSITIVO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${device}</td></tr>
@@ -86,20 +78,17 @@ async function notifyLogin(profile, req) {
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">NAVEGADOR</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${browser}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">USER AGENT</td><td style="padding:8px 0;color:rgba(0,245,255,0.4);font-size:0.7rem;word-break:break-all;">${ua}</td></tr>
           </table>
-
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">RED Y CONEXIÓN</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
-            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">DIRECCIÓN IP</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#ff2d6b;">${ip}</td></tr>
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">IP</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#ff2d6b;">${ip}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">IDIOMA NAVEGADOR</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${lang}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">REFERER</td><td style="padding:8px 0;color:#e0f7ff;">${referer}</td></tr>
           </table>
-
           <p style="color:#00f5ff;font-size:0.65rem;letter-spacing:0.35em;margin:0 0 0.5rem 0;border-bottom:1px solid rgba(0,245,255,0.1);padding-bottom:0.5rem;">FECHA Y HORA</p>
           <table style="width:100%;border-collapse:collapse;margin-bottom:2rem;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;width:45%;">FECHA</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${date}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">HORA (ESP)</td><td style="padding:8px 0;color:#e0f7ff;">${time}</td></tr>
+            <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">HORA</td><td style="padding:8px 0;color:#e0f7ff;">${time}</td></tr>
           </table>
-
           <p style="color:rgba(0,245,255,0.15);font-size:0.55rem;letter-spacing:0.2em;margin:0;text-align:center;">WAEVO PROXY · SISTEMA DE MONITOREO</p>
         </div>
       `,
@@ -115,21 +104,15 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'waevo-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: false,
-    httpOnly: true,
-    expires: false,
-  }
+  cookie: { secure: false, httpOnly: true, expires: false }
 }));
 
-// ── Passport Google OAuth ─────────────────────────────────
+// ── Passport ──────────────────────────────────────────────
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: 'https://waevo-proxy.vercel.app/auth/callback',
-}, (accessToken, refreshToken, profile, done) => {
-  return done(null, profile);
-}));
+}, (accessToken, refreshToken, profile, done) => done(null, profile)));
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
@@ -137,7 +120,7 @@ passport.deserializeUser((user, done) => done(null, user));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ── Middlewares ───────────────────────────────────────────
+// ── Middlewares generales ─────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -148,51 +131,49 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Service-Worker-Allowed', '/');
-  res.setHeader('Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), payment=(), ' +
-    'interest-cohort=(), browsing-topics=()'
-  );
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // Solo aplicar no-cache a páginas, no a recursos del proxy
+  if (!req.path.startsWith('/uv/') && !req.path.startsWith('/b/')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+  }
   next();
 });
 
-// Cache UV — ANTES del auth
+// ── Estáticos UV — sin auth, con cache ───────────────────
 app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
-  maxAge: '7d', immutable: true,
+  maxAge: '7d',
+  immutable: true,
 }));
 
-// ── Middleware auth ───────────────────────────────────────
+// ── Auth middleware ───────────────────────────────────────
 function requireAuth(req, res, next) {
-  const publicPaths = [
-    '/login',
-    '/auth',
-    '/uv/',
-    '/b/',
-  ];
-
-  // Rutas del Service Worker — siempre públicas
-  if (req.path.startsWith('/uv/') || req.path.startsWith('/b/')) {
+  // Estas rutas NUNCA requieren auth
+  if (
+    req.path.startsWith('/uv/') ||
+    req.path.startsWith('/b/') ||
+    req.path.startsWith('/login') ||
+    req.path.startsWith('/auth')
+  ) {
     return next();
   }
 
-  const isPublic = publicPaths.some(p => req.path.startsWith(p));
-  if (isPublic) return next();
-
-  const authed = req.isAuthenticated() || req.session?.bypass === true;
-  if (authed) return next();
+  if (req.isAuthenticated() || req.session?.bypass === true) {
+    return next();
+  }
 
   res.redirect('/login');
 }
 
 app.use(requireAuth);
 
+// ── Resto de estáticos — con auth ────────────────────────
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
   lastModified: false,
 }));
 
-// ── Rutas Auth Google ─────────────────────────────────────
+// ── Auth Google ───────────────────────────────────────────
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
@@ -238,7 +219,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// 404 — solo para rutas reales, nunca para el proxy
+// 404 — nunca intercepta rutas del proxy
 app.use((req, res) => {
   if (req.path.startsWith('/uv/') || req.path.startsWith('/b/')) {
     return res.status(200).end();
@@ -246,7 +227,7 @@ app.use((req, res) => {
   res.status(404).send('404');
 });
 
-// ── Servidor HTTP ─────────────────────────────────────────
+// ── HTTP Server ───────────────────────────────────────────
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -265,7 +246,6 @@ server.on('upgrade', (req, socket, head) => {
 
 server.on('error', (err) => console.error('❌ Server error:', err));
 
-// ── Inicio ────────────────────────────────────────────────
 server.listen(PORT, () => {
   const address = server.address();
   console.log('\n🌐 Waevo Proxy corriendo en:');

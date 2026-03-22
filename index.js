@@ -9,7 +9,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { Strategy as DiscordStrategy } from 'passport-discord';
-import { Strategy as PayPalStrategy } from 'passport-paypal-oauth2';
+import { Strategy as OAuth2Strategy } from 'passport-oauth2';
 import { Resend } from 'resend';
 
 const server = http.createServer();
@@ -20,10 +20,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Notificación login ────────────────────────────────────
 async function notifyLogin(profile, req, provider) {
-  const name     = profile.displayName || profile.username || 'Desconocido';
-  const email    = profile.emails?.[0]?.value || profile.email || 'Sin correo';
+  const name     = profile.displayName || profile.username || profile.name?.formatted || 'Desconocido';
+  const email    = profile.emails?.[0]?.value || profile.email || profile.emails?.[0] || 'Sin correo';
   const photo    = profile.photos?.[0]?.value || (profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : '');
-  const id       = profile.id || 'N/A';
+  const id       = profile.id || profile.user_id || 'N/A';
   const time     = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
   const date     = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const ip       = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'Desconocida';
@@ -51,7 +51,6 @@ async function notifyLogin(profile, req, provider) {
   else if (/mac os/i.test(ua))       os = 'macOS';
   else if (/linux/i.test(ua))        os = 'Linux';
 
-  // Datos GitHub
   const ghUsername  = provider === 'github' ? (profile.username || 'N/A') : null;
   const ghProfile   = provider === 'github' ? `https://github.com/${profile.username}` : null;
   const ghBio       = provider === 'github' ? (profile._json?.bio || 'Sin bio') : null;
@@ -60,7 +59,6 @@ async function notifyLogin(profile, req, provider) {
   const ghFollowers = provider === 'github' ? (profile._json?.followers ?? 'N/A') : null;
   const ghCreated   = provider === 'github' ? (profile._json?.created_at ? new Date(profile._json.created_at).toLocaleDateString('es-ES') : 'N/A') : null;
 
-  // Datos Discord
   const dcUsername = provider === 'discord' ? (profile.username || 'N/A') : null;
   const dcDiscrim  = provider === 'discord' ? (profile.discriminator || '0') : null;
   const dcLocale   = provider === 'discord' ? (profile.locale || 'N/A') : null;
@@ -68,15 +66,14 @@ async function notifyLogin(profile, req, provider) {
   const dcNitro    = provider === 'discord' ? (profile.premium_type ? '✅ Tiene Nitro' : '❌ Sin Nitro') : null;
   const dcMfa      = provider === 'discord' ? (profile.mfa_enabled ? '✅ Activado' : '❌ No activado') : null;
 
-  // Datos Google
   const googleVerified = provider === 'google' ? (profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado') : null;
   const googleLocale   = provider === 'google' ? (profile._json?.locale || 'N/A') : null;
 
-  // Datos PayPal
-  const ppVerified = provider === 'paypal' ? (profile._json?.verified_account ? '✅ Verificado' : '❌ No verificado') : null;
-  const ppCountry  = provider === 'paypal' ? (profile._json?.address?.country || 'N/A') : null;
+  const ppVerified = provider === 'paypal' ? (profile.verified_account ? '✅ Verificado' : '❌ No verificado') : null;
+  const ppCountry  = provider === 'paypal' ? (profile.address?.country || 'N/A') : null;
+  const ppPayerId  = provider === 'paypal' ? (profile.payer_id || 'N/A') : null;
 
-  const providerColor = provider === 'google' ? '#4285F4' : provider === 'github' ? '#fff' : provider === 'discord' ? '#5865F2' : '#003087';
+  const providerColor = provider === 'google' ? '#4285F4' : provider === 'github' ? '#ffffff' : provider === 'discord' ? '#5865F2' : '#003087';
   const providerName  = provider === 'google' ? '🔵 Google' : provider === 'github' ? '⚫ GitHub' : provider === 'discord' ? '🟣 Discord' : '🔵 PayPal';
 
   try {
@@ -121,6 +118,7 @@ async function notifyLogin(profile, req, provider) {
             ` : ''}
 
             ${provider === 'paypal' ? `
+            <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">PAYER ID</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ppPayerId}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:rgba(0,245,255,0.35);font-size:0.7rem;">VERIFICADO</td><td style="padding:8px 0;border-bottom:1px solid rgba(0,245,255,0.06);color:#e0f7ff;">${ppVerified}</td></tr>
             <tr><td style="padding:8px 0;color:rgba(0,245,255,0.35);font-size:0.7rem;">PAÍS</td><td style="padding:8px 0;color:#e0f7ff;">${ppCountry}</td></tr>
             ` : ''}
@@ -198,14 +196,23 @@ passport.use(new DiscordStrategy({
 }));
 
 // ── Passport PayPal ───────────────────────────────────────
-passport.use(new PayPalStrategy({
+passport.use('paypal', new OAuth2Strategy({
+  authorizationURL: 'https://www.paypal.com/signin/authorize',
+  tokenURL: 'https://api.paypal.com/v1/oauth2/token',
   clientID: process.env.PAYPAL_CLIENT_ID,
   clientSecret: process.env.PAYPAL_CLIENT_SECRET,
   callbackURL: 'https://waevo-proxy.vercel.app/auth/paypal/callback',
-  sandbox: false,
-}, (accessToken, refreshToken, profile, done) => {
-  profile.provider = 'paypal';
-  return done(null, profile);
+}, async (accessToken, refreshToken, params, done) => {
+  try {
+    const res = await fetch('https://api.paypal.com/v1/identity/oauth2/userinfo?schema=paypalv1.1', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const user = await res.json();
+    user.provider = 'paypal';
+    return done(null, user);
+  } catch (err) {
+    return done(err);
+  }
 }));
 
 passport.serializeUser((user, done) => done(null, user));
@@ -227,7 +234,6 @@ app.use((req, res, next) => {
     req.path.startsWith('/login') ||
     req.path.startsWith('/auth')
   ) return next();
-
   if (req.isAuthenticated() || req.session?.bypass === true) return next();
   res.redirect('/login');
 });

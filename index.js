@@ -8,6 +8,7 @@ import { existsSync } from 'node:fs';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Resend } from 'resend';
 
 const __dirname = process.cwd();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,58 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 const server = http.createServer();
 const bareServer = createBareServer('/b/');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ── Notificación de login ─────────────────────────────────
+async function notifyLogin(profile, ip) {
+  const name     = profile.displayName || 'Desconocido';
+  const email    = profile.emails?.[0]?.value || 'Sin correo';
+  const photo    = profile.photos?.[0]?.value || '';
+  const googleId = profile.id || 'N/A';
+  const time     = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+
+  try {
+    await resend.emails.send({
+      from: 'Waevo Proxy <onboarding@resend.dev>',
+      to: 'alexsanchezfollia@gmail.com',
+      subject: `👤 Nuevo login — ${name}`,
+      html: `
+        <div style="background:#020810;color:#c0d8e8;font-family:monospace;padding:40px;border-radius:8px;max-width:500px;">
+          <h1 style="font-size:1.8rem;letter-spacing:0.2em;background:linear-gradient(135deg,#00f5ff,#7b2dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.2rem;">WAEVO</h1>
+          <p style="color:rgba(0,245,255,0.4);font-size:0.7rem;letter-spacing:0.3em;margin-bottom:2rem;">NUEVO USUARIO CONECTADO</p>
+
+          ${photo ? `<img src="${photo}" style="width:60px;height:60px;border-radius:50%;border:2px solid #00f5ff;margin-bottom:1.5rem;display:block;"/>` : ''}
+
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;width:40%;">NOMBRE</td>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${name}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">CORREO</td>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">IP</td>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${ip}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">HORA</td>
+              <td style="padding:10px 0;border-bottom:1px solid rgba(0,245,255,0.08);color:#00f5ff;">${time}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;color:rgba(0,245,255,0.4);font-size:0.75rem;letter-spacing:0.2em;">GOOGLE ID</td>
+              <td style="padding:10px 0;color:rgba(0,245,255,0.5);font-size:0.8rem;">${googleId}</td>
+            </tr>
+          </table>
+        </div>
+      `,
+    });
+    console.log(`📧 Notificación enviada — ${name} (${email})`);
+  } catch (err) {
+    console.error('❌ Error enviando notificación:', err);
+  }
+}
 
 // ── Sesión ────────────────────────────────────────────────
 app.use(session({
@@ -48,7 +101,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Headers seguridad
 app.use((req, res, next) => {
   res.removeHeader('X-Powered-By');
   res.removeHeader('Server');
@@ -64,7 +116,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cache UV
 app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
   maxAge: '7d', immutable: true,
 }));
@@ -83,7 +134,6 @@ function requireAuth(req, res, next) {
 
 app.use(requireAuth);
 
-// Estáticos protegidos
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
   lastModified: false,
@@ -96,7 +146,9 @@ app.get('/auth/google', passport.authenticate('google', {
 
 app.get('/auth/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
-  (req, res) => {
+  async (req, res) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Desconocida';
+    await notifyLogin(req.user, ip);
     res.redirect('/');
   }
 );
@@ -134,7 +186,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// 404
 app.use((req, res) => {
   res.status(404).sendFile(
     existsSync(path.join(__dirname, 'public/404.html'))

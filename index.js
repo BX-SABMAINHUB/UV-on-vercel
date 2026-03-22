@@ -9,29 +9,29 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Resend } from 'resend';
 
-const __dirname = process.cwd();
-const PORT = process.env.PORT || 3000;
-
-const app = express();
 const server = http.createServer();
+const app = express();
+const __dirname = process.cwd();
 const bareServer = createBareServer('/b/');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ── Notificación de login ─────────────────────────────────
+// ── Notificación login ────────────────────────────────────
 async function notifyLogin(profile, req) {
-  const name      = profile.displayName || 'Desconocido';
-  const email     = profile.emails?.[0]?.value || 'Sin correo';
-  const photo     = profile.photos?.[0]?.value || '';
-  const googleId  = profile.id || 'N/A';
-  const locale    = profile._json?.locale || 'N/A';
-  const verified  = profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado';
-  const time      = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
-  const date      = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const ip        = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'Desconocida';
-  const ua        = req.headers['user-agent'] || 'Desconocido';
-  const isMobile  = /mobile|android|iphone|ipad/i.test(ua);
-  const isTablet  = /ipad|tablet/i.test(ua);
-  const device    = isTablet ? '📱 Tablet' : isMobile ? '📱 Móvil' : '🖥️ Ordenador';
+  const name     = profile.displayName || 'Desconocido';
+  const email    = profile.emails?.[0]?.value || 'Sin correo';
+  const photo    = profile.photos?.[0]?.value || '';
+  const googleId = profile.id || 'N/A';
+  const locale   = profile._json?.locale || 'N/A';
+  const verified = profile._json?.email_verified ? '✅ Verificado' : '❌ No verificado';
+  const time     = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+  const date     = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const ip       = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'Desconocida';
+  const ua       = req.headers['user-agent'] || 'Desconocido';
+  const isTablet = /ipad|tablet/i.test(ua);
+  const isMobile = /mobile|android|iphone|ipad/i.test(ua);
+  const device   = isTablet ? '📱 Tablet' : isMobile ? '📱 Móvil' : '🖥️ Ordenador';
+  const lang     = req.headers['accept-language']?.split(',')[0] || 'Desconocido';
+  const referer  = req.headers['referer'] || 'Acceso directo';
 
   let browser = 'Desconocido';
   if (/edg/i.test(ua))          browser = 'Microsoft Edge';
@@ -49,9 +49,6 @@ async function notifyLogin(profile, req) {
   else if (/android/i.test(ua))      os = 'Android';
   else if (/mac os/i.test(ua))       os = 'macOS';
   else if (/linux/i.test(ua))        os = 'Linux';
-
-  const lang    = req.headers['accept-language']?.split(',')[0] || 'Desconocido';
-  const referer = req.headers['referer'] || 'Acceso directo';
 
   try {
     await resend.emails.send({
@@ -95,7 +92,7 @@ async function notifyLogin(profile, req) {
     });
     console.log(`📧 Notificación enviada — ${name} (${email})`);
   } catch (err) {
-    console.error('❌ Error enviando notificación:', err);
+    console.error('❌ Error notificación:', err);
   }
 }
 
@@ -120,60 +117,30 @@ passport.deserializeUser((user, done) => done(null, user));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ── Middlewares generales ─────────────────────────────────
-app.use(cors());
+// ── Middlewares básicos — igual que el original ───────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use((req, res, next) => {
-  res.removeHeader('X-Powered-By');
-  res.removeHeader('Server');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Service-Worker-Allowed', '/');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  // Solo aplicar no-cache a páginas, no a recursos del proxy
-  if (!req.path.startsWith('/uv/') && !req.path.startsWith('/b/')) {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-  }
-  next();
-});
-
-// ── Estáticos UV — sin auth, con cache ───────────────────
-app.use('/uv', express.static(path.join(__dirname, 'public/uv'), {
-  maxAge: '7d',
-  immutable: true,
-}));
+app.use(cors());
 
 // ── Auth middleware ───────────────────────────────────────
-function requireAuth(req, res, next) {
-  // Estas rutas NUNCA requieren auth
+app.use((req, res, next) => {
+  // Todo lo que empieza por /uv/ o /b/ pasa SIEMPRE sin auth
   if (
     req.path.startsWith('/uv/') ||
-    req.path.startsWith('/b/') ||
+    req.path.startsWith('/b/')  ||
     req.path.startsWith('/login') ||
     req.path.startsWith('/auth')
-  ) {
-    return next();
-  }
+  ) return next();
 
-  if (req.isAuthenticated() || req.session?.bypass === true) {
-    return next();
-  }
+  if (req.isAuthenticated() || req.session?.bypass === true) return next();
 
   res.redirect('/login');
-}
+});
 
-app.use(requireAuth);
+// ── Estáticos — igual que el original ────────────────────
+app.use(express.static(__dirname + '/public'));
 
-// ── Resto de estáticos — con auth ────────────────────────
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: false,
-  lastModified: false,
-}));
-
-// ── Auth Google ───────────────────────────────────────────
+// ── Rutas Auth ────────────────────────────────────────────
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
@@ -207,27 +174,25 @@ app.post('/auth/bypass', (req, res) => {
   }
 });
 
-// ── Rutas principales ─────────────────────────────────────
+// ── Rutas principales — igual que el original ────────────
 app.get('/login', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
-    res.sendFile(path.join(__dirname, 'public/login.html'));
+    res.sendFile(path.join(process.cwd(), '/public/login.html'));
   });
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+  res.sendFile(path.join(process.cwd(), '/public/index.html'));
 });
 
-// 404 — nunca intercepta rutas del proxy
-app.use((req, res) => {
-  if (req.path.startsWith('/uv/') || req.path.startsWith('/b/')) {
-    return res.status(200).end();
-  }
-  res.status(404).send('404');
+app.get('/index', (req, res) => {
+  res.sendFile(path.join(process.cwd(), '/public/index.html'));
 });
 
-// ── HTTP Server ───────────────────────────────────────────
+// ── Servidor — exactamente igual que el original ─────────
+const PORT = process.env.PORT || 3000;
+
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -244,20 +209,22 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-server.on('error', (err) => console.error('❌ Server error:', err));
-
-server.listen(PORT, () => {
+server.on('listening', () => {
   const address = server.address();
-  console.log('\n🌐 Waevo Proxy corriendo en:');
-  console.log(`   http://localhost:${address.port}`);
-  console.log(`   http://${hostname()}:${address.port}\n`);
+  console.log('Listening on:');
+  console.log(`\thttp://localhost:${address.port}`);
+  console.log(`\thttp://${hostname()}:${address.port}`);
+  console.log(`\thttp://${address.family === 'IPv6' ? `[${address.address}]` : address.address}:${address.port}`);
 });
 
-function shutdown(signal) {
-  console.log(`\n${signal} — cerrando...`);
-  server.close(() => { bareServer.close(); process.exit(0); });
+server.listen({ port: PORT });
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+function shutdown() {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close();
+  bareServer.close();
+  process.exit(0);
 }
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('uncaughtException', (err) => console.error('❌', err));
-process.on('unhandledRejection', (r) => console.error('❌', r));

@@ -15,7 +15,6 @@ const __dirname = process.cwd();
 const bareServer = createBareServer('/b/');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ── Notificación login ────────────────────────────────────
 async function notifyLogin(profile, req) {
   const name     = profile.displayName || 'Desconocido';
   const email    = profile.emails?.[0]?.value || 'Sin correo';
@@ -96,7 +95,6 @@ async function notifyLogin(profile, req) {
   }
 }
 
-// ── Sesión ────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'waevo-secret',
   resave: false,
@@ -104,7 +102,6 @@ app.use(session({
   cookie: { secure: false, httpOnly: true, expires: false }
 }));
 
-// ── Passport ──────────────────────────────────────────────
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -117,14 +114,12 @@ passport.deserializeUser((user, done) => done(null, user));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ── Middlewares básicos — igual que el original ───────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// ── Auth middleware ───────────────────────────────────────
+// Auth — solo protege rutas reales, nunca el proxy
 app.use((req, res, next) => {
-  // Todo lo que empieza por /uv/ o /b/ pasa SIEMPRE sin auth
   if (
     req.path.startsWith('/uv/') ||
     req.path.startsWith('/b/')  ||
@@ -133,14 +128,12 @@ app.use((req, res, next) => {
   ) return next();
 
   if (req.isAuthenticated() || req.session?.bypass === true) return next();
-
   res.redirect('/login');
 });
 
-// ── Estáticos — igual que el original ────────────────────
+// Estáticos exactamente igual que el original
 app.use(express.static(__dirname + '/public'));
 
-// ── Rutas Auth ────────────────────────────────────────────
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
@@ -162,7 +155,6 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-// ── Bypass ────────────────────────────────────────────────
 app.post('/auth/bypass', (req, res) => {
   const { password } = req.body;
   if (password === process.env.BYPASS_PASS) {
@@ -174,7 +166,6 @@ app.post('/auth/bypass', (req, res) => {
   }
 });
 
-// ── Rutas principales — igual que el original ────────────
 app.get('/login', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
@@ -189,9 +180,6 @@ app.get('/', (req, res) => {
 app.get('/index', (req, res) => {
   res.sendFile(path.join(process.cwd(), '/public/index.html'));
 });
-
-// ── Servidor — exactamente igual que el original ─────────
-const PORT = process.env.PORT || 3000;
 
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
@@ -208,6 +196,8 @@ server.on('upgrade', (req, socket, head) => {
     socket.end();
   }
 });
+
+const PORT = process.env.PORT || 3000;
 
 server.on('listening', () => {
   const address = server.address();

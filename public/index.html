@@ -460,19 +460,24 @@
   </div>
 </div>
 
-<!-- Scripts originales del repo UV-on-vercel — NO TOCAR -->
+<!-- Scripts originales del repo UV-on-vercel — CORREGIDO (solo esta parte) -->
 <script src="/uv/uv.bundle.js"></script>
 <script src="/uv/uv.config.js"></script>
 <script>
-  async function registerSW() {
-    if ('serviceWorker' in navigator) {
-      await navigator.serviceWorker.register('/uv/uv.sw.js', {
+  // Registro CORRECTO según el README del repo (usa /uv/sw.js, no /uv/uv.sw.js)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/uv/sw.js", {
         scope: __uv$config.prefix,
+      }).then(() => {
+        console.log("✅ Service Worker registrado correctamente");
+      }).catch(err => {
+        console.error("❌ Error registrando SW:", err);
       });
-    }
+    });
   }
 
-  function go() {
+  async function go() {
     const input = document.getElementById('url').value.trim();
     if (!input) return;
 
@@ -486,6 +491,12 @@
     }
 
     document.getElementById('loading').classList.add('active');
+
+    // FIX CRÍTICO: esperamos a que el SW esté activo (así funciona para TODOS los usuarios la primera vez)
+    if ("serviceWorker" in navigator) {
+      await navigator.serviceWorker.ready;
+    }
+
     setTimeout(() => {
       location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
     }, 700);
@@ -499,8 +510,6 @@
   document.getElementById('url').addEventListener('keydown', e => {
     if (e.key === 'Enter') go();
   });
-
-  registerSW();
 </script>
 </body>
 </html>

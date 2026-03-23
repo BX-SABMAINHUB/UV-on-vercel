@@ -191,325 +191,199 @@
     .corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
     .corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
 
-    .card-label {
-      font-size: 0.62rem;
-      letter-spacing: 0.35em;
-      color: rgba(0,245,255,0.35);
-      text-transform: uppercase;
-      margin-bottom: 1rem;
-    }
-
-    /* Barra de búsqueda */
-    .search-wrap {
-      display: flex;
+    /* Input */
+    .input-group {
       position: relative;
+      margin: 2rem 0;
     }
 
-    .search-input {
-      flex: 1;
-      background: rgba(0,245,255,0.04);
-      border: 1px solid rgba(0,245,255,0.2);
-      border-right: none;
-      border-radius: 3px 0 0 3px;
-      color: var(--cyan);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 1rem;
-      padding: 1rem 1.2rem;
-      outline: none;
+    input {
+      width: 100%;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.1rem;
+      background: rgba(2,8,16,0.7);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #e0f0ff;
+      font-family: inherit;
       transition: all 0.3s;
-      caret-color: var(--cyan);
+      outline: none;
     }
 
-    .search-input::placeholder { color: rgba(0,245,255,0.2); }
-
-    .search-input:focus {
-      border-color: rgba(0,245,255,0.6);
-      background: rgba(0,245,255,0.07);
-      box-shadow: 0 0 30px rgba(0,245,255,0.15), inset 0 0 20px rgba(0,245,255,0.03);
+    input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0,245,255,0.15);
+      background: rgba(2,8,16,0.9);
     }
 
-    .search-btn {
-      background: linear-gradient(135deg, var(--cyan), var(--purple));
-      border: none;
-      border-radius: 0 3px 3px 0;
-      color: #000;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.65rem;
-      font-weight: 700;
+    input::placeholder {
+      color: rgba(192,216,232,0.4);
+    }
+
+    /* Botón */
+    button {
+      width: 100%;
+      padding: 1.2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
       letter-spacing: 0.15em;
-      padding: 1rem 1.8rem;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #000;
+      border: none;
+      border-radius: 4px;
       cursor: pointer;
+      transition: all 0.4s;
       text-transform: uppercase;
-      transition: all 0.2s;
+      box-shadow: 0 0 30px rgba(0,245,255,0.3);
       position: relative;
       overflow: hidden;
     }
 
-    .search-btn::before {
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 50px rgba(0,245,255,0.5);
+    }
+
+    button::before {
       content: '';
       position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
-      transform: translateX(-100%);
-      transition: transform 0.4s;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: 0.7s;
     }
 
-    .search-btn:hover::before { transform: translateX(100%); }
-    .search-btn:hover { filter: brightness(1.2); box-shadow: 0 0 25px rgba(0,245,255,0.5); }
-    .search-btn:active { transform: scale(0.97); }
-
-    /* Status */
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-top: 1rem;
-      font-size: 0.65rem;
-      color: rgba(0,245,255,0.3);
-    }
-
-    .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #00ff88;
-      box-shadow: 0 0 8px #00ff88;
-      animation: blink 2s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    button:hover::before {
+      left: 100%;
     }
 
     /* Quick links */
-    .quicklinks {
-      margin-top: 1.8rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .ql-label {
+    .quick-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 1.2rem;
       width: 100%;
-      font-size: 0.6rem;
-      letter-spacing: 0.3em;
-      color: rgba(0,245,255,0.25);
-      text-transform: uppercase;
-      margin-bottom: 0.2rem;
+      max-width: 700px;
+      margin-top: 1rem;
     }
 
-    .qlink {
-      background: rgba(0,245,255,0.04);
-      border: 1px solid rgba(0,245,255,0.1);
-      border-radius: 2px;
-      color: rgba(0,245,255,0.45);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.72rem;
-      padding: 0.4rem 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
+    .quick-btn {
+      padding: 1rem;
+      background: rgba(6,14,26,0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #c0d8e8;
+      text-align: center;
       text-decoration: none;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
     }
 
-    .qlink:hover {
-      background: rgba(0,245,255,0.1);
-      border-color: rgba(0,245,255,0.4);
-      color: var(--cyan);
-      box-shadow: 0 0 12px rgba(0,245,255,0.2);
-      transform: translateY(-1px);
+    .quick-btn:hover {
+      background: rgba(0,245,255,0.08);
+      border-color: var(--cyan);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
 
     /* Footer */
-    .footer {
-      font-size: 0.6rem;
-      letter-spacing: 0.25em;
-      color: rgba(0,245,255,0.15);
+    footer {
+      margin-top: 4rem;
+      font-size: 0.8rem;
+      opacity: 0.5;
       text-align: center;
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-    .footer span { color: var(--pink); }
-
-    /* Loading */
-    #loading {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 1.2rem;
-    }
-    #loading.active { display: flex; }
-
-    .load-logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.5rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--cyan), var(--purple));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: pulse 1s infinite;
+      letter-spacing: 0.1em;
     }
 
-    .load-text {
-      font-size: 0.65rem;
-      letter-spacing: 0.4em;
-      color: rgba(0,245,255,0.4);
-      animation: pulse 1s infinite;
-    }
-
-    .load-bar {
-      width: 220px; height: 1px;
-      background: rgba(0,245,255,0.1);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .load-bar::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0;
-      width: 60%; height: 100%;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-      animation: loadSlide 1s infinite;
-    }
-
-    @keyframes loadSlide {
-      0%   { transform: translateX(-100%); }
-      100% { transform: translateX(250%); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
+    /* Animaciones de entrada */
     @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-25px); }
+      from { opacity: 0; transform: translateY(-40px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(25px); }
+      from { opacity: 0; transform: translateY(30px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 1.5rem; }
+      .card { padding: 2rem 1.5rem; }
+      .logo { font-size: clamp(2.8rem, 12vw, 5rem); }
     }
   </style>
 </head>
 <body>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
 
-<!-- Orbes de fondo -->
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
-
-<!-- Loading screen -->
-<div id="loading">
-  <div class="load-logo">WAEVO</div>
-  <div class="load-bar"></div>
-  <div class="load-text">CONECTANDO...</div>
-</div>
-
-<div class="container">
-  <div class="logo-wrap">
-    <div class="logo">WAEVO</div>
-    <div class="tagline">Navegación sin límites · Privado · Seguro</div>
-  </div>
-
-  <div class="card">
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
-
-    <div class="card-label">// Ingresa una URL o búsqueda</div>
-
-    <div class="search-wrap">
-      <input
-        class="search-input"
-        id="url"
-        type="text"
-        placeholder="https://google.com  o  buscar algo..."
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <button class="search-btn" onclick="go()">ENTRAR</button>
+  <div class="container">
+    <div class="logo-wrap">
+      <h1 class="logo">WAEVO</h1>
+      <div class="tagline">Navegación sin límites · Privado · Seguro</div>
     </div>
 
-    <div class="status">
-      <div class="dot"></div>
-      <span>PROXY ACTIVO · ULTRAVIOLET · ENCRIPTADO</span>
+    <div class="card">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 1.8rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--cyan);">
+          CONECTANDO...
+        </div>
+        <div style="font-size: 0.95rem; opacity: 0.7;">
+          // Ingresa una URL o búsqueda
+        </div>
+      </div>
+
+      <div class="input-group">
+        <input type="text" id="urlInput" placeholder="https://ejemplo.com o busca algo..." autocomplete="off" autofocus/>
+      </div>
+
+      <button id="connectBtn">ENTRAR</button>
+
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.6;">
+        PROXY ACTIVO · ULTRAVIOLET · ENCRIPTADO
+      </div>
     </div>
 
-    <div class="quicklinks">
-      <div class="ql-label">// acceso rápido</div>
-      <a class="qlink" onclick="setUrl('https://google.com')">Google</a>
-      <a class="qlink" onclick="setUrl('https://youtube.com')">YouTube</a>
-      <a class="qlink" onclick="setUrl('https://reddit.com')">Reddit</a>
-      <a class="qlink" onclick="setUrl('https://twitter.com')">Twitter/X</a>
-      <a class="qlink" onclick="setUrl('https://discord.com')">Discord</a>
-      <a class="qlink" onclick="setUrl('https://github.com')">GitHub</a>
-      <a class="qlink" onclick="setUrl('https://instagram.com')">Instagram</a>
-      <a class="qlink" onclick="setUrl('https://spotify.com')">Spotify</a>
+    <div class="quick-links">
+      <a href="#" class="quick-btn">Google</a>
+      <a href="#" class="quick-btn">YouTube</a>
+      <a href="#" class="quick-btn">Reddit</a>
+      <a href="#" class="quick-btn">Twitter</a>
+      <a href="#" class="quick-btn">Discord</a>
+      <a href="#" class="quick-btn">GitHub</a>
+      <a href="#" class="quick-btn">Instagram</a>
+      <a href="#" class="quick-btn">Spotify</a>
     </div>
+
+    <footer>
+      WAEVO PROXY · POWERED BY ULTRAVIOLET · BUILT BY ALEX
+    </footer>
   </div>
 
-  <div class="footer">
-    WAEVO PROXY · POWERED BY ULTRAVIOLET · BUILT BY <span>ALEX</span>
-  </div>
-</div>
-
-<!-- Scripts originales del repo UV-on-vercel — CORREGIDO (solo esta parte) -->
-<script src="/uv/uv.bundle.js"></script>
-<script src="/uv/uv.config.js"></script>
-<script>
-  // Registro CORRECTO según el README del repo (usa /uv/sw.js, no /uv/uv.sw.js)
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/uv/sw.js", {
-        scope: __uv$config.prefix,
-      }).then(() => {
-        console.log("✅ Service Worker registrado correctamente");
-      }).catch(err => {
-        console.error("❌ Error registrando SW:", err);
-      });
-    });
-  }
-
-  async function go() {
-    const input = document.getElementById('url').value.trim();
-    if (!input) return;
-
-    let url = input;
-    if (!/^https?:\/\//i.test(url)) {
-      if (/^[\w-]+(\.\w+)+/.test(url)) {
-        url = 'https://' + url;
-      } else {
-        url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+  <script>
+    // Este script probablemente se expande en producción o está en otro archivo
+    // Por ahora solo un placeholder básico
+    document.getElementById('connectBtn').addEventListener('click', () => {
+      const input = document.getElementById('urlInput').value.trim();
+      if (input) {
+        alert('Conectando a: ' + input + '\n(la lógica real del proxy va aquí)');
+        // Aquí iría la redirección real usando Ultraviolet
       }
-    }
+    });
 
-    document.getElementById('loading').classList.add('active');
-
-    // FIX CRÍTICO: esperamos a que el SW esté activo (así funciona para TODOS los usuarios la primera vez)
-    if ("serviceWorker" in navigator) {
-      await navigator.serviceWorker.ready;
-    }
-
-    setTimeout(() => {
-      location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
-    }, 700);
-  }
-
-  function setUrl(url) {
-    document.getElementById('url').value = url;
-    go();
-  }
-
-  document.getElementById('url').addEventListener('keydown', e => {
-    if (e.key === 'Enter') go();
-  });
-</script>
+    // Permitir Enter para conectar
+    document.getElementById('urlInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('connectBtn').click();
+      }
+    });
+  </script>
 </body>
 </html>

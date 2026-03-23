@@ -460,24 +460,19 @@
   </div>
 </div>
 
-<!-- Scripts corregidos (solo esta parte) -->
+<!-- Scripts originales del repo UV-on-vercel — NO TOCAR -->
 <script src="/uv/uv.bundle.js"></script>
 <script src="/uv/uv.config.js"></script>
 <script>
-  // Registro correcto + espera del SW (esto es lo que hacía que solo funcionara para ti)
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/uv/sw.js", {
+  async function registerSW() {
+    if ('serviceWorker' in navigator) {
+      await navigator.serviceWorker.register('/uv/uv.sw.js', {
         scope: __uv$config.prefix,
-      }).then(() => {
-        console.log("✅ Service Worker registrado correctamente");
-      }).catch(err => {
-        console.error("❌ Error registrando SW:", err);
       });
-    });
+    }
   }
 
-  async function go() {
+  function go() {
     const input = document.getElementById('url').value.trim();
     if (!input) return;
 
@@ -491,12 +486,6 @@
     }
 
     document.getElementById('loading').classList.add('active');
-
-    // ESPERA a que el SW esté activo (clave para usuarios nuevos)
-    if ("serviceWorker" in navigator) {
-      await navigator.serviceWorker.ready;
-    }
-
     setTimeout(() => {
       location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
     }, 700);
@@ -510,6 +499,6 @@
   document.getElementById('url').addEventListener('keydown', e => {
     if (e.key === 'Enter') go();
   });
+
+  registerSW();
 </script>
-</body>
-</html>

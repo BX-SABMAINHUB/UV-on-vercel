@@ -464,31 +464,27 @@
 <script src="/uv/uv.bundle.js"></script>
 <script src="/uv/uv.config.js"></script>
 <script>
-  async function registerSW() {
-    if ('serviceWorker' in navigator) {
-      await navigator.serviceWorker.register('/uv/uv.sw.js', {
-        scope: __uv$config.prefix,
-      });
-    }
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/uv/uv.sw.js", { scope: __uv$config.prefix })
+        .then(() => console.log("SW registrado"))
+        .catch(err => console.error("Error SW:", err));
+    });
   }
 
-  function go() {
-    const input = document.getElementById('url').value.trim();
-    if (!input) return;
-
-    let url = input;
-    if (!/^https?:\/\//i.test(url)) {
-      if (/^[\w-]+(\.\w+)+/.test(url)) {
-        url = 'https://' + url;
-      } else {
-        url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-      }
-    }
+  async function go() {
+    // ... tu lógica de procesar url (https:// + google search) ...
 
     document.getElementById('loading').classList.add('active');
+
+    // Esto es lo clave: ESPERA al SW (funciona para TODOS, primera vez incluida)
+    if ("serviceWorker" in navigator) {
+      await navigator.serviceWorker.ready.catch(() => {});  // ignora error si no hay SW
+    }
+
     setTimeout(() => {
       location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
-    }, 700);
+    }, 800);  // delay visual
   }
 
   function setUrl(url) {

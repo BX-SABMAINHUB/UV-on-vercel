@@ -8,5 +8,5 @@ self.__uv$config = {
     client: "/uv/uv.client.js",
     bundle: "/uv/uv.bundle.js",
     config: "/uv/uv.config.js",
-    sw: "/uv/uv.sw.js",
+    sw: "/uv/sw.js",                  // ← CORREGIDO (usa el wrapper que ya tienes)
 };

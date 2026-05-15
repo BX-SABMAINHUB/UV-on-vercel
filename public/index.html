@@ -470,12 +470,9 @@
         await navigator.serviceWorker.register('/uv/uv.sw.js', {
           scope: __uv$config.prefix,
         });
-        console.log('✅ Service Worker registrado correctamente en scope:', __uv$config.prefix);
       } catch (e) {
-        console.error('❌ Error al registrar el Service Worker:', e);
+        console.error('Error al registrar SW:', e);
       }
-    } else {
-      console.warn('⚠️ Service Worker no soportado en este navegador');
     }
   }
 
@@ -494,21 +491,18 @@
 
     document.getElementById('loading').classList.add('active');
 
-    // Espera inteligente al Service Worker
+    // Espera inteligente: si el SW ya controla, sigue; si no, espera hasta 3s
     if ('serviceWorker' in navigator) {
-      // Si ya controla la página, seguimos directo
       if (navigator.serviceWorker.controller) {
-        console.log('⚡ SW ya controla, redirigiendo inmediatamente');
+        // ya listo
       } else {
-        // Espera con timeout de 3 segundos
         try {
           await Promise.race([
             navigator.serviceWorker.ready,
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
           ]);
-          console.log('⏳ SW listo tras espera');
         } catch (e) {
-          console.warn('⚠️ SW no listo tras 3s, redirigiendo de todas formas');
+          console.warn('SW no listo a tiempo, continuando igualmente');
         }
       }
     }

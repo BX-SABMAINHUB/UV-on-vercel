@@ -329,6 +329,11 @@ app.get('/index', (req, res) => {
   res.sendFile(path.join(process.cwd(), '/public/index.html'));
 });
 
+// <-- AÑADIR ESTA LÍNEA (justo aquí, antes de '// ── Servidor ───────────────────────')
+app.get('/uv/service/index', (req, res) => {
+  res.sendFile(path.join(process.cwd(), '/public/index.html'));
+});
+
 // ── Servidor ──────────────────────────────────────────────
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {

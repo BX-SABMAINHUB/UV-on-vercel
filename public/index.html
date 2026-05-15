@@ -470,25 +470,27 @@
       return;
     }
 
+    // Si ya estamos dentro del scope del SW, no hay que hacer nada
+    if (window.location.pathname.startsWith(__uv$config.prefix)) {
+      console.log('⚡ Ya dentro del scope del SW');
+      return;
+    }
+
     try {
       const reg = await navigator.serviceWorker.register('/uv/uv.sw.js', {
         scope: __uv$config.prefix,
       });
-
       console.log('✅ SW registrado, scope:', reg.scope);
 
-      // Si el SW ya controla esta página, no hay que hacer nada más
+      // Si el SW ya controla esta página, no recargamos
       if (navigator.serviceWorker.controller) {
         console.log('⚡ SW ya controla la página');
         return;
       }
 
-      // Esperamos a que esté activo, y si aún no controla, forzamos una recarga para que el SW tome el control
-      await navigator.serviceWorker.ready;
-      if (!navigator.serviceWorker.controller) {
-        console.log('🔄 Recargando para que el SW tome el control...');
-        window.location.reload();
-      }
+      // Si no controla, redirigimos a la ruta bajo el scope
+      console.log('🔄 Redirigiendo a /uv/service/index para que el SW tome el control...');
+      window.location.replace('/uv/service/index');
     } catch (e) {
       console.error('❌ Error al registrar SW:', e);
     }
@@ -509,7 +511,7 @@
 
     document.getElementById('loading').classList.add('active');
 
-    // El SW ya debería estar controlando, así que esta navegación será interceptada automáticamente
+    // La navegación ahora será interceptada por el SW
     location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
   }
 

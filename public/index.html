@@ -443,8 +443,7 @@
         return;
       }
       try {
-        // Usamos la ruta definida en __uv$config.sw
-        const swPath = __uv$config.sw;
+        const swPath = __uv$config.sw || '/uv/sw.js';
         const reg = await navigator.serviceWorker.register(swPath, {
           scope: __uv$config.prefix,
         });

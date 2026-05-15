@@ -494,13 +494,22 @@
 
     document.getElementById('loading').classList.add('active');
 
-    // Espera a que el Service Worker esté listo antes de redirigir
+    // Espera inteligente al Service Worker
     if ('serviceWorker' in navigator) {
-      try {
-        await navigator.serviceWorker.ready;
-        console.log('⏳ SW listo, redirigiendo...');
-      } catch (e) {
-        console.warn('⚠️ No se pudo esperar al SW, redirigiendo de todas formas.');
+      // Si ya controla la página, seguimos directo
+      if (navigator.serviceWorker.controller) {
+        console.log('⚡ SW ya controla, redirigiendo inmediatamente');
+      } else {
+        // Espera con timeout de 3 segundos
+        try {
+          await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+          ]);
+          console.log('⏳ SW listo tras espera');
+        } catch (e) {
+          console.warn('⚠️ SW no listo tras 3s, redirigiendo de todas formas');
+        }
       }
     }
 

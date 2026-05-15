@@ -466,13 +466,20 @@
 <script>
   async function registerSW() {
     if ('serviceWorker' in navigator) {
-      await navigator.serviceWorker.register('/uv/uv.sw.js', {
-        scope: __uv$config.prefix,
-      });
+      try {
+        await navigator.serviceWorker.register('/uv/uv.sw.js', {
+          scope: __uv$config.prefix,
+        });
+        console.log('✅ Service Worker registrado correctamente en scope:', __uv$config.prefix);
+      } catch (e) {
+        console.error('❌ Error al registrar el Service Worker:', e);
+      }
+    } else {
+      console.warn('⚠️ Service Worker no soportado en este navegador');
     }
   }
 
-  function go() {
+  async function go() {
     const input = document.getElementById('url').value.trim();
     if (!input) return;
 
@@ -486,9 +493,18 @@
     }
 
     document.getElementById('loading').classList.add('active');
-    setTimeout(() => {
-      location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
-    }, 700);
+
+    // Espera a que el Service Worker esté listo antes de redirigir
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.ready;
+        console.log('⏳ SW listo, redirigiendo...');
+      } catch (e) {
+        console.warn('⚠️ No se pudo esperar al SW, redirigiendo de todas formas.');
+      }
+    }
+
+    location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
   }
 
   function setUrl(url) {

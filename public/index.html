@@ -460,19 +460,37 @@
   </div>
 </div>
 
-<!-- Scripts originales del repo UV-on-vercel — NO TOCAR -->
+<!-- Scripts originales del repo UV-on-vercel -->
 <script src="/uv/uv.bundle.js"></script>
 <script src="/uv/uv.config.js"></script>
 <script>
   async function registerSW() {
-    if ('serviceWorker' in navigator) {
-      try {
-        await navigator.serviceWorker.register('/uv/uv.sw.js', {
-          scope: __uv$config.prefix,
-        });
-      } catch (e) {
-        console.error('Error al registrar SW:', e);
+    if (!('serviceWorker' in navigator)) {
+      console.warn('Service Worker no soportado');
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.register('/uv/uv.sw.js', {
+        scope: __uv$config.prefix,
+      });
+
+      console.log('✅ SW registrado, scope:', reg.scope);
+
+      // Si el SW ya controla esta página, no hay que hacer nada más
+      if (navigator.serviceWorker.controller) {
+        console.log('⚡ SW ya controla la página');
+        return;
       }
+
+      // Esperamos a que esté activo, y si aún no controla, forzamos una recarga para que el SW tome el control
+      await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        console.log('🔄 Recargando para que el SW tome el control...');
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error('❌ Error al registrar SW:', e);
     }
   }
 
@@ -491,22 +509,7 @@
 
     document.getElementById('loading').classList.add('active');
 
-    // Espera inteligente: si el SW ya controla, sigue; si no, espera hasta 3s
-    if ('serviceWorker' in navigator) {
-      if (navigator.serviceWorker.controller) {
-        // ya listo
-      } else {
-        try {
-          await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-          ]);
-        } catch (e) {
-          console.warn('SW no listo a tiempo, continuando igualmente');
-        }
-      }
-    }
-
+    // El SW ya debería estar controlando, así que esta navegación será interceptada automáticamente
     location.assign(__uv$config.prefix + __uv$config.encodeUrl(url));
   }
 
